@@ -16,10 +16,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddHttpClient("upstream", client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(4);
+    client.Timeout = TimeSpan.FromSeconds(8);
 }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
 {
-    ConnectTimeout = TimeSpan.FromSeconds(2)
+    ConnectTimeout = TimeSpan.FromSeconds(5)
 });
 
 var app = builder.Build();
