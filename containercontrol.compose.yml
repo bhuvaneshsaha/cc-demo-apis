@@ -1,0 +1,54 @@
+# Application compose for ContainerControl.
+# Uses Hub images only. Ingress hostnames are for api-a and api-b.
+# api-3 and api-4 are unpublished and stay off the edge network.
+# api-a is not on net-b34, so it cannot resolve or route to api-4.
+
+services:
+  api-a:
+    image: bhuvaneshsaha/cc-demo-api-a:latest
+    environment:
+      API3_URL: http://api-3:8080
+      API4_URL: http://api-4:8080
+    networks:
+      - edge
+      - net-a3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.api-a.rule=Host(`api-a.localhost`)
+      - traefik.http.routers.api-a.entrypoints=web
+      - traefik.http.services.api-a.loadbalancer.server.port=8080
+
+  api-b:
+    image: bhuvaneshsaha/cc-demo-api-b:latest
+    environment:
+      API3_URL: http://api-3:8080
+      API4_URL: http://api-4:8080
+    networks:
+      - edge
+      - net-b34
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.api-b.rule=Host(`api-b.localhost`)
+      - traefik.http.routers.api-b.entrypoints=web
+      - traefik.http.services.api-b.loadbalancer.server.port=8080
+
+  api-3:
+    image: bhuvaneshsaha/cc-demo-api-3:latest
+    networks:
+      - net-a3
+      - net-b34
+
+  api-4:
+    image: bhuvaneshsaha/cc-demo-api-4:latest
+    networks:
+      - net-b34
+
+networks:
+  edge:
+    driver: bridge
+  net-a3:
+    driver: bridge
+  net-b34:
+    driver: bridge

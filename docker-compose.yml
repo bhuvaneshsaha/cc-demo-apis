@@ -1,0 +1,57 @@
+# Local demo stack. Publishes only the public edge APIs.
+# api-3 and api-4 have no host ports and are not attached to `edge`.
+
+services:
+  api-a:
+    build:
+      context: ./api-a
+    image: bhuvaneshsaha/cc-demo-api-a:latest
+    ports:
+      - "18081:8080"
+    environment:
+      API3_URL: http://api-3:8080
+      API4_URL: http://api-4:8080
+    networks:
+      - edge
+      - net-a3
+    depends_on:
+      - api-3
+
+  api-b:
+    build:
+      context: ./api-b
+    image: bhuvaneshsaha/cc-demo-api-b:latest
+    ports:
+      - "18082:8080"
+    environment:
+      API3_URL: http://api-3:8080
+      API4_URL: http://api-4:8080
+    networks:
+      - edge
+      - net-b34
+    depends_on:
+      - api-3
+      - api-4
+
+  api-3:
+    build:
+      context: ./api-3
+    image: bhuvaneshsaha/cc-demo-api-3:latest
+    networks:
+      - net-a3
+      - net-b34
+
+  api-4:
+    build:
+      context: ./api-4
+    image: bhuvaneshsaha/cc-demo-api-4:latest
+    networks:
+      - net-b34
+
+networks:
+  edge:
+    driver: bridge
+  net-a3:
+    driver: bridge
+  net-b34:
+    driver: bridge
