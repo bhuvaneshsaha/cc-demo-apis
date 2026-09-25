@@ -1,4 +1,5 @@
 const string ServiceName = "api-3";
+const string SampleKey = "API_C_SAMPLE_VALUE";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,8 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
+var sampleValue = ReadSample(app.Configuration[SampleKey]);
+
 app.MapGet("/", () => Results.Json(new { name = ServiceName, role = "private" }))
     .WithName("Identity")
     .WithTags("meta")
@@ -32,4 +35,18 @@ app.MapGet("/health", () => Results.Json(new { service = ServiceName, status = "
     .WithTags("meta")
     .WithSummary("Liveness");
 
+app.MapGet("/env/sample", () => Results.Json(new
+{
+    service = ServiceName,
+    key = SampleKey,
+    set = sampleValue is not null,
+    value = sampleValue
+}))
+    .WithName("SampleEnv")
+    .WithTags("meta")
+    .WithSummary("Optional sample value from configuration");
+
 app.Run();
+
+static string? ReadSample(string? configured) =>
+    string.IsNullOrWhiteSpace(configured) ? null : configured.Trim();
