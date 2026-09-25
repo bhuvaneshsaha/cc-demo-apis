@@ -131,16 +131,16 @@ Expected:
 - `/call/api3` from both edges returns `"ok": true` and api-3's health body.
 - api-a `/call/api4` returns `"ok": false` and a `reason` (name lookup or connect failure). It does not crash.
 - api-b `/call/api4` returns `"ok": true` and api-4's health body.
-- `docker compose ps` shows host ports only on api-a (`18081`) and api-b (`18082`).
+- `docker compose ps` shows `0.0.0.0:18081->8080/tcp` and `0.0.0.0:18082->8080/tcp` only. api-3 and api-4 show `8080/tcp` with no host mapping (the image `EXPOSE`s 8080; it is not published).
 
-There is nothing to curl for api-3 or api-4 on the host. Confirm with:
+Nothing on the host is bound to api-3 or api-4. `docker port` for those containers prints nothing, and `docker compose port api-3 8080` / `api-4` prints `:0` (no host address):
 
 ```bash
-docker compose port api-3 8080
-docker compose port api-4 8080
+docker port "$(docker compose ps -q api-3)"
+docker port "$(docker compose ps -q api-4)"
+docker compose port api-a 8080
+docker compose port api-b 8080
 ```
-
-Both commands print nothing and exit non-zero.
 
 ## Test in ContainerControl
 
