@@ -94,11 +94,53 @@ Upstream base URLs default to `API3_URL=http://api-3:8080` and `API4_URL=http://
 |--------|------|----------|------|
 | GET | `/` | all | `{ "name": "...", "role": "public" \| "private" }` |
 | GET | `/health` | all | `{ "service": "...", "status": "ok" }` |
+| GET | `/env/sample` | all | sample secret from configuration; see below |
 | GET | `/swagger` | all | Swagger UI |
 | GET | `/call/api3` | api-a, api-b | upstream `/health` status and body |
 | GET | `/call/api4` | api-a, api-b | upstream `/health`, or `{ "ok": false, "reason": "..." }` when the call cannot connect |
 
 `/call/api4` on api-a is expected to fail closed. The process stays up and returns JSON.
+
+## Sample environment secrets
+
+Each service reads one optional value through ASP.NET configuration, the same way api-a and api-b read `API3_URL` and `API4_URL` (environment variables override `appsettings`). ContainerControl assigns the secret as an environment variable on the matching service. The apps do not ship sample values, and the compose files do not set these keys.
+
+| Service | Environment variable |
+|---------|----------------------|
+| api-a | `API_A_SAMPLE_VALUE` |
+| api-b | `API_B_SAMPLE_VALUE` |
+| api-3 | `API_C_SAMPLE_VALUE` |
+| api-4 | `API_D_SAMPLE_VALUE` |
+
+`GET /env/sample` returns the configured value when it is non-empty:
+
+```json
+{ "service": "api-a", "key": "API_A_SAMPLE_VALUE", "set": true, "value": "Test API A" }
+```
+
+A missing or whitespace-only variable stays a 200 and reports that it was not set. The process does not crash:
+
+```json
+{ "service": "api-a", "key": "API_A_SAMPLE_VALUE", "set": false, "value": null }
+```
+
+api-b, api-3, and api-4 use the same shape with their own `service` and `key`.
+
+After ContainerControl assigns those secrets to the matching services (values such as `Test API A`, `Test API B`, `Test API C`, and `Test API D`):
+
+```bash
+curl -sS http://api-a.localhost/env/sample
+curl -sS http://api-b.localhost/env/sample
+```
+
+api-3 and api-4 have no host port. From a container on a shared network (`net-b34` reaches both; `net-a3` reaches api-3 only):
+
+```bash
+curl -sS http://api-3:8080/env/sample
+curl -sS http://api-4:8080/env/sample
+```
+
+Replace the public hostnames if ContainerControl assigns different ones. Expect `"set": true` and the assigned string. A service whose secret was not assigned returns `"set": false` and `"value": null`.
 
 ## Verify
 
@@ -123,11 +165,16 @@ curl -sS http://localhost:18081/call/api4
 # api-b reaches api-3 and api-4
 curl -sS http://localhost:18082/call/api3
 curl -sS http://localhost:18082/call/api4
+
+# Sample secrets are not set in docker-compose.yml
+curl -sS http://localhost:18081/env/sample
+curl -sS http://localhost:18082/env/sample
 ```
 
 Expected:
 
 - api-a and api-b `/health` return `"status": "ok"`.
+- api-a and api-b `/env/sample` return `"set": false` and `"value": null` when the sample variables are absent.
 - `/call/api3` from both edges returns `"ok": true` and api-3's health body.
 - api-a `/call/api4` returns `"ok": false` and a `reason` (name lookup or connect failure). It does not crash.
 - api-b `/call/api4` returns `"ok": true` and api-4's health body.

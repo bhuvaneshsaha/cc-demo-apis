@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 const string ServiceName = "api-b";
+const string SampleKey = "API_B_SAMPLE_VALUE";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,7 @@ app.UseSwaggerUI(options =>
 
 var api3Url = ConfigUrl(app.Configuration["API3_URL"], "http://api-3:8080");
 var api4Url = ConfigUrl(app.Configuration["API4_URL"], "http://api-4:8080");
+var sampleValue = ReadSample(app.Configuration[SampleKey]);
 
 app.MapGet("/", () => Results.Json(new { name = ServiceName, role = "public" }))
     .WithName("Identity")
@@ -43,6 +45,17 @@ app.MapGet("/health", () => Results.Json(new { service = ServiceName, status = "
     .WithName("Health")
     .WithTags("meta")
     .WithSummary("Liveness");
+
+app.MapGet("/env/sample", () => Results.Json(new
+{
+    service = ServiceName,
+    key = SampleKey,
+    set = sampleValue is not null,
+    value = sampleValue
+}))
+    .WithName("SampleEnv")
+    .WithTags("meta")
+    .WithSummary("Optional sample value from configuration");
 
 app.MapGet("/call/api3", async (IHttpClientFactory factory, ILogger<Program> logger) =>
         await CallHealth(factory, api3Url, logger))
@@ -60,6 +73,9 @@ app.Run();
 
 static string ConfigUrl(string? configured, string fallback) =>
     string.IsNullOrWhiteSpace(configured) ? fallback : configured.Trim();
+
+static string? ReadSample(string? configured) =>
+    string.IsNullOrWhiteSpace(configured) ? null : configured.Trim();
 
 static async Task<IResult> CallHealth(IHttpClientFactory factory, string baseUrl, ILogger logger)
 {
